@@ -10,10 +10,9 @@ import com.google.android.filament.VertexBuffer
 import io.github.sceneview.geometries.Geometry
 
 /**
- * Mesh are bundles of primitives, each of which has its own geometry and material.
+ * Mesh是原始图形的集合，每个原始图形都有自己的几何体和材质。
  *
- * All primitives in a particular renderable share a set of rendering attributes, such as whether
- * they cast shadows or use vertex skinning. Kotlin usage example:
+ * 特定可渲染对象中的所有原始图形共享一组渲染属性，例如是否投射阴影或使用顶点蒙皮。Kotlin使用示例：
  *
  * ```
  * val entity = EntityManager.get().create()
@@ -27,10 +26,7 @@ import io.github.sceneview.geometries.Geometry
  * scene.addEntity(renderable)
  * ```
  *
- * To modify the state of an existing renderable, clients should first use RenderableManager to get
- * a temporary handle called an <em>instance</em>. The instance can then be used to get or set the
- * renderable's state. Please note that instances are ephemeral; clients should store entities,
- * not instances.
+ * 要修改现有可渲染对象的状态，客户端应首先使用RenderableManager获取一个临时句柄，称为“实例”。然后可以使用该实例来获取或设置可渲染对象的状态。请注意，实例是短暂的；客户端应存储实体，而不是实例。
  *
  * @see Geometry
  */
@@ -41,9 +37,9 @@ open class MeshNode(
     val indexBuffer: IndexBuffer,
     val boundingBox: Box? = null,
     /**
-     * Binds a material instance.
+     * 绑定材质实例。
      *
-     * If no material is specified, Filament will fall back to a basic default material.
+     * 如果未指定材质，Filament将回退到基本默认材质。
      */
     materialInstance: MaterialInstance? = null,
     builder: RenderableManager.Builder.() -> Unit = {}

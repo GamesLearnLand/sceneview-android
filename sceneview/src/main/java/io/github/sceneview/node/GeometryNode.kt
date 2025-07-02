@@ -9,10 +9,10 @@ import io.github.sceneview.managers.materials
 import io.github.sceneview.safeDestroyGeometry
 
 /**
- * Mesh are bundles of primitives, each of which has its own geometry and material.
+ * Mesh是原始图元的集合，每个图元都有自己的几何体和材质。
  *
- * All primitives in a particular renderable share a set of rendering attributes, such as whether
- * they cast shadows or use vertex skinning. Kotlin usage example:
+ * 特定可渲染对象中的所有图元共享一组渲染属性，例如是否投射阴影或使用顶点蒙皮。
+ * Kotlin使用示例：
  *
  * ```
  * val entity = EntityManager.get().create()
@@ -26,10 +26,9 @@ import io.github.sceneview.safeDestroyGeometry
  * scene.addEntity(renderable)
  * ```
  *
- * To modify the state of an existing renderable, clients should first use RenderableManager to get
- * a temporary handle called an <em>instance</em>. The instance can then be used to get or set the
- * renderable's state. Please note that instances are ephemeral; clients should store entities,
- * not instances.
+ * 要修改现有可渲染对象的状态，客户端应首先使用RenderableManager获取一个临时句柄，称为“实例”。
+ * 然后可以使用该实例来获取或设置可渲染对象的状态。
+ * 请注意，实例是短暂的；客户端应存储实体，而不是实例。
  *
  * @see Geometry
  */
@@ -63,6 +62,12 @@ open class GeometryNode(
         builderApply = builderApply
     )
 
+    /**
+     * 更新几何体的顶点和索引数据。
+     *
+     * @param vertices 顶点列表，默认值为当前几何体的顶点。
+     * @param indices 原始图元的索引列表，默认值为当前几何体的索引。
+     */
     fun updateGeometry(
         vertices: List<Geometry.Vertex> = geometry.vertices,
         indices: List<List<Int>> = geometry.primitivesIndices
