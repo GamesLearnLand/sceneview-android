@@ -218,15 +218,14 @@ open class Node(
         }
 
     /**
-     * Orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`.
+     * 欧拉角表示的朝向，每个轴的角度范围为 `0.0f` 到 `360.0f`。
      *
-     * The three-component rotation vector specifies the direction of the rotation axis in degrees.
-     * Rotation is applied relative to the component's origin property.
+     * 三元素旋转向量以角度指定旋转轴的方向。
+     * 旋转是相对于组件的原点属性进行的。
      *
-     * Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
+     * 默认值为 `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`，表示无旋转。
      *
-     * Note that modifying the individual components of the returned rotation doesn't have any
-     * effect.
+     * 注意：修改返回的旋转值的单个分量不会产生任何效果。
      *
      * @see transform
      */
