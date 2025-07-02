@@ -885,22 +885,27 @@ open class SceneView @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // This makes sure that the view's onTouchListener is called.
+        // 确保视图的onTouchListener被调用
         if (!super.onTouchEvent(event)) {
             lastTouchEvent = event
+
+            // 执行碰撞检测，找到被触摸的节点
             val hitResult = collisionSystem.hitTest(event).firstOrNull {
-                it.node.isTouchable
+                it.node.isTouchable // 只选择可触摸的节点
             }
+
+            // 如果全局触摸事件监听器或节点自身的触摸事件处理没有消费该事件
             if (onTouchEvent?.invoke(event, hitResult) != true &&
                 hitResult?.node?.onTouchEvent(event, hitResult) != true
             ) {
+                // 则交由手势检测器和相机手势检测器处理
                 gestureDetector?.onTouchEvent(event, hitResult)
                 cameraGestureDetector?.onTouchEvent(event)
             }
 
-            return true
+            return true // 表示事件已被处理
         }
-        return false
+        return false // 事件未被处理，交由父类或其他视图处理
     }
 
     protected open fun onResized(width: Int, height: Int) {
