@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaRecorder
 import android.opengl.EGLContext
-import android.os.Build
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.MotionEvent
@@ -13,7 +12,6 @@ import android.view.SurfaceView
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
-import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -74,6 +72,7 @@ import io.github.sceneview.utils.intervalSeconds
 import io.github.sceneview.utils.readBuffer
 import io.github.sceneview.utils.setKeepScreenOn
 
+// 类型别名定义
 typealias Entity = Int
 typealias EntityInstance = Int
 typealias FilamentEntity = com.google.android.filament.Entity
@@ -81,11 +80,15 @@ typealias FilamentEntityInstance = com.google.android.filament.EntityInstance
 
 /**
  * A SurfaceView that manages rendering and interactions with the 3D scene.
+ * 管理3D场景渲染和交互的SurfaceView。
  *
  * Maintains the scene graph, a hierarchical organization of a scene's content.
+ * 维护场景图，这是场景内容的层次化组织结构。
  * A scene can have zero or more child nodes and each node can have zero or more child nodes.
+ * 一个场景可以有零个或多个子节点，每个节点也可以有零个或多个子节点。
  * The Scene also provides hit testing, a way to detect which node is touched by a MotionEvent or
  * Ray.
+ * 场景还提供碰撞检测功能，这是一种检测哪个节点被MotionEvent或射线触碰的方法。
  */
 open class SceneView @JvmOverloads constructor(
     context: Context,
@@ -94,129 +97,165 @@ open class SceneView @JvmOverloads constructor(
     defStyleRes: Int = 0,
     /**
      * Provide your own instance if you want to share Filament resources between multiple views.
+     * 如果您想在多个视图之间共享Filament资源，请提供您自己的实例。
      */
     sharedEngine: Engine? = null,
     /**
      * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which is
      * a bundle of Filament textures, vertex buffers, index buffers, etc.
+     * 消费glTF 2.0内容块（JSON或GLB格式）并生成[Model]对象，该对象是Filament纹理、顶点缓冲区、索引缓冲区等的集合。
      *
      * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and components.
+     * [Model]由一个或多个包含实体和组件的[ModelInstance]对象组成。
      */
     sharedModelLoader: ModelLoader? = null,
     /**
      * A Filament Material defines the visual appearance of an object.
+     * Filament材质定义了对象的视觉外观。
      *
      * Materials function as a templates from which [MaterialInstance]s can be spawned.
+     * 材质作为模板，可以从中生成[MaterialInstance]实例。
      */
     sharedMaterialLoader: MaterialLoader? = null,
     /**
      * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
      * IBLs, and sky boxes.
+     * 用于解码HDR文件或处理KTX1文件并生成Filament纹理、IBL和天空盒的工具。
      *
      * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
      * into a single file.
+     * KTX是一种简单的容器格式，可以轻松地将mip级别和立方体贴图面打包到单个文件中。
      */
     sharedEnvironmentLoader: EnvironmentLoader? = null,
     /**
      * Provide your own instance if you want to share [Node]s' scene between multiple views.
+     * 如果您想在多个视图之间共享[Node]的场景，请提供您自己的实例。
      */
     sharedScene: Scene? = null,
     /**
      * Encompasses all the state needed for rendering a {@link Scene}.
+     * 包含渲染{@link Scene}所需的所有状态。
      *
      * [View] instances are heavy objects that internally cache a lot of data needed for
      * rendering. It is not advised for an application to use many View objects.
+     * [View]实例是重量级对象，内部缓存了大量渲染所需的数据。不建议应用程序使用太多View对象。
      *
      * For example, in a game, a [View] could be used for the main scene and another one for the
      * game's user interface. More <code>View</code> instances could be used for creating special
      * effects (e.g. a [View] is akin to a rendering pass).
+     * 例如，在游戏中，一个[View]可以用于主场景，另一个用于游戏用户界面。更多的<code>View</code>实例可以用于创建特殊效果（例如，[View]类似于渲染通道）。
      */
     sharedView: View? = null,
     /**
      * A [Renderer] instance represents an operating system's window.
+     * [Renderer]实例代表操作系统的窗口。
      *
      * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
      * commands for the render thread and manages frame latency.
+     * 通常，应用程序为每个窗口创建一个[Renderer]。[Renderer]为渲染线程生成绘制命令并管理帧延迟。
      */
     sharedRenderer: Renderer? = null,
     /**
      * Represents a virtual camera, which determines the perspective through which the scene is
      * viewed.
+     * 代表虚拟摄像机，决定观察场景的视角。
      *
      * All other functionality in Node is supported. You can access the position and rotation of the
      * camera, assign a collision shape to it, or add children to it.
+     * 支持Node中的所有其他功能。您可以访问摄像机的位置和旋转，为其分配碰撞形状，或向其添加子节点。
      */
     sharedCameraNode: CameraNode? = null,
     /**
      * Always add a direct light source since it is required for shadowing.
+     * 始终添加直接光源，因为阴影渲染需要它。
      *
      * We highly recommend adding an [IndirectLight] as well.
+     * 我们强烈建议同时添加[IndirectLight]。
      */
     sharedMainLightNode: LightNode? = null,
     /**
      * Defines the lighting environment and the skybox of the scene.
+     * 定义场景的光照环境和天空盒。
      *
      * Environments are usually captured as high-resolution HDR equirectangular images and processed
      * by the cmgen tool to generate the data needed by IndirectLight.
+     * 环境通常以高分辨率HDR等距柱状投影图像的形式捕获，并通过cmgen工具处理以生成IndirectLight所需的数据。
      *
      * You can also process an hdr at runtime but this is more consuming.
+     * 您也可以在运行时处理hdr，但这会消耗更多资源。
      *
      * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
      * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
      * mountains.
+     * - 目前IndirectLight旨在用于"远距离探针"，即表示来自远距离（即无限远）环境的全局照明，如天空或远山。
      * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
      * future.
+     * 一个场景中只能使用一个IndirectLight。这个限制将在未来解除。
      *
      * - When added to a Scene, the Skybox fills all untouched pixels.
+     * - 当添加到场景中时，天空盒会填充所有未被几何体触及的像素。
      *
      * @see [EnvironmentLoader]
      */
     sharedEnvironment: Environment? = null,
     /**
      * Controls whether the render target (SurfaceView) is opaque or not.
+     * 控制渲染目标（SurfaceView）是否不透明。
      * The render target is considered opaque by default.
+     * 渲染目标默认被认为是不透明的。
      */
     isOpaque: Boolean = true,
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
+     * 物理系统，用于处理节点之间的碰撞、节点的碰撞检测等。
      */
     sharedCollisionSystem: CollisionSystem? = null,
     /**
      * Helper that enables camera interaction similar to sketchfab or Google Maps.
+     * 启用类似于sketchfab或Google Maps的摄像机交互的辅助工具。
      *
      * Needs to be a callable function because it can be reinitialized in case of viewport change
      * or camera node manual position changed.
+     * 需要是一个可调用函数，因为在视口变化或摄像机节点手动位置改变时可以重新初始化。
      *
      * The first onTouch event will make the first manipulator build. So you can change the camera
      * position before any user gesture.
+     * 第一个onTouch事件将构建第一个操作器。因此您可以在任何用户手势之前更改摄像机位置。
      *
      * Clients notify the camera manipulator of various mouse or touch events, then periodically
      * call its getLookAt() method so that they can adjust their camera(s). Three modes are
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
+     * 客户端通知摄像机操作器各种鼠标或触摸事件，然后定期调用其getLookAt()方法以便调整摄像机。支持三种模式：ORBIT、MAP和FREE_FLIGHT。要构造操作器实例，需要将所需模式传递给create方法。
      */
     cameraManipulator: CameraGestureDetector.CameraManipulator? =
         createDefaultCameraManipulator(sharedCameraNode?.worldPosition),
     /**
      * Used for Node's that can display an Android [View]
+     * 用于可以显示Android [View]的Node。
      *
      * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
      * added and removed from.
+     * 管理直接附加到[WindowManager]的[FrameLayout]，其他视图可以从中添加和移除。
      *
      * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
      * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
      * views can be added to as children. This allows us to safely and correctly draw the [View]
      * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
      * isolated from the rest of the activities View hierarchy.
+     * 要渲染[View]，必须将[View]附加到[WindowManager]以便正确绘制。此类封装了附加到[WindowManager]的[FrameLayout]，其他视图可以作为子视图添加到其中。这使我们能够安全正确地绘制与[RenderableManager] [Entity]和[MaterialInstance]关联的[View]，同时将它们与活动的其余View层次结构隔离。
      *
      * Additionally, this manages the lifecycle of the window to help ensure that the window is
      * added/removed from the WindowManager at the appropriate times.
+     * 此外，这还管理窗口的生命周期，以帮助确保在适当的时间从WindowManager添加/移除窗口。
      */
     var viewNodeWindowManager: ViewNode2.WindowManager? = null,
     /**
      * The listener invoked for all the gesture detector callbacks.
+     * 为所有手势检测器回调调用的监听器。
      *
      * Responds to Android touch events with listeners.
+     * 通过监听器响应Android触摸事件。
      */
     onGestureListener: GestureDetector.OnGestureListener? = null,
     var onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
@@ -225,8 +264,12 @@ open class SceneView @JvmOverloads constructor(
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
 
     /** ## Deprecated: Use [CameraGestureDetector.DefaultCameraManipulator]
+     * ## 已弃用：使用[CameraGestureDetector.DefaultCameraManipulator]
      *
      * Replace `manipulator = Manipulator.Builder().build()` with
+     * `cameraManipulator = CameraGestureDetector.DefaultCameraManipulator(manipulator =
+     * Manipulator.Builder().build())`
+     * 将`manipulator = Manipulator.Builder().build()`替换为
      * `cameraManipulator = CameraGestureDetector.DefaultCameraManipulator(manipulator =
      * Manipulator.Builder().build())`
      */
@@ -254,7 +297,7 @@ open class SceneView @JvmOverloads constructor(
         onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
         sharedActivity: ComponentActivity? = null,
         sharedLifecycle: Lifecycle? = null,
-    ): this (
+    ) : this(
         context = context,
         attrs = attrs,
         defStyleAttr = defStyleAttr,
@@ -294,28 +337,36 @@ open class SceneView @JvmOverloads constructor(
     /**
      * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
      * IBLs, and sky boxes.
+     * 用于解码HDR文件或处理KTX1文件并生成Filament纹理、IBL和天空盒的工具。
      *
      * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
      * into a single file.
+     * KTX是一种简单的容器格式，可以轻松地将mip级别和立方体贴图面打包到单个文件中。
      */
     val environmentLoader = sharedEnvironmentLoader
         ?: createEnvironmentLoader(engine, context).also { defaultEnvironmentLoader = it }
 
     /**
      * Defines the lighting environment and the skybox of the scene.
+     * 定义场景的光照环境和天空盒。
      *
      * Environments are usually captured as high-resolution HDR equirectangular images and processed
      * by the cmgen tool to generate the data needed by IndirectLight.
+     * 环境通常以高分辨率HDR等距柱状投影图像的形式捕获，并通过cmgen工具处理以生成IndirectLight所需的数据。
      *
      * You can also process an hdr at runtime but this is more consuming.
+     * 您也可以在运行时处理hdr，但这会消耗更多资源。
      *
      * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
      * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
      * mountains.
+     * - 目前IndirectLight旨在用于"远距离探针"，即表示来自远距离（即无限远）环境的全局照明，如天空或远山。
      * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
      * future.
+     * 一个场景中只能使用一个IndirectLight。这个限制将在未来解除。
      *
      * - When added to a Scene, the Skybox fills all untouched pixels.
+     * - 当添加到场景中时，天空盒会填充所有未被几何体触及的像素。
      *
      * @see [EnvironmentLoader]
      */
@@ -336,6 +387,8 @@ open class SceneView @JvmOverloads constructor(
             scene.skybox = environment.skybox
         }
     }
+
+    // 场景属性，获取和设置当前视图的场景
     var scene
         get() = view.scene!!
         set(value) {
@@ -343,20 +396,25 @@ open class SceneView @JvmOverloads constructor(
                 view.scene = value
             }
         }
+
+    // 渲染器，负责生成绘制命令和管理帧延迟
     val renderer =
         (sharedRenderer ?: createRenderer(engine).also { defaultRenderer = it }).also { renderer ->
             if (!isOpaque) {
                 // clear the swapchain with transparent pixels
+                // 用透明像素清除交换链
                 renderer.clearOptions = renderer.clearOptions.apply {
                     clear = !isOpaque
                 }
             }
         }
 
+    // UI辅助工具，管理Surface的生命周期和渲染回调
     val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).also { uiHelper ->
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.isOpaque = isOpaque
         // Make the render target transparent
+        // 使渲染目标透明
         uiHelper.attachTo(this@SceneView)
     }
 
@@ -365,10 +423,12 @@ open class SceneView @JvmOverloads constructor(
     /**
      * Represents a virtual camera, which determines the perspective through which the scene is
      * viewed.
+     * 代表虚拟摄像机，决定观察场景的视角。
      *
      * All other functionality in Node is supported. You can access the position and rotation of the
      * camera, assign a collision shape to it, or add children to it. Disabling the camera turns off
      * rendering.
+     * 支持Node中的所有其他功能。您可以访问摄像机的位置和旋转，为其分配碰撞形状，或向其添加子节点。禁用摄像机会关闭渲染。
      */
     open val cameraNode: CameraNode get() = _cameraNode!!
 
@@ -377,8 +437,10 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Always add a direct light source since it is required for shadowing.
+     * 始终添加直接光源，因为阴影渲染需要它。
      *
      * We highly recommend adding an [IndirectLight] as well.
+     * 我们强烈建议同时添加[IndirectLight]。
      */
     open var mainLightNode: LightNode?
         get() = _mainLightNode
@@ -392,10 +454,14 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * IndirectLight is used to simulate environment lighting.
+     * IndirectLight用于模拟环境光照。
      *
      * Environment lighting has a two components:
+     * 环境光照有两个组件：
      * - irradiance
+     * - 辐照度
      * - reflections (specular component)
+     * - 反射（镜面反射组件）
      *
      * @see IndirectLight.Builder
      * @see EnvironmentLoader
@@ -410,10 +476,13 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * The Skybox is drawn last and covers all pixels not touched by geometry.
+     * 天空盒最后绘制，覆盖所有未被几何体触及的像素。
      *
      * When added to a [SceneView], the `Skybox` fills all untouched pixels.
+     * 当添加到[SceneView]时，`Skybox`填充所有未触及的像素。
      *
      * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
+     * 用于填充未触及像素的天空盒，或null来取消设置天空盒。
      *
      * @see Skybox.Builder
      * @see ModelLoader
@@ -426,6 +495,14 @@ open class SceneView @JvmOverloads constructor(
             }
         }
 
+    /**
+     * A list of child nodes directly attached to this SceneView.
+     * 直接附加到此SceneView的子节点列表。
+     *
+     * Each node can have an arbitrary number of child nodes and one parent. The parent may be
+     * another node, or the [SceneView].
+     * 每个节点可以有任意数量的子节点和一个父节点。父节点可以是另一个节点，或者是[SceneView]。
+     */
     var childNodes = listOf<Node>()
         set(value) {
             val removedNodes = (field - value.toSet())
@@ -441,18 +518,23 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Inverts winding for front face rendering.
+     * 反转正面渲染的缠绕顺序。
      *
      * Inverts the winding order of front faces. By default front faces use a counter-clockwise
      * winding order. When the winding order is inverted, front faces are faces with a clockwise
      * winding order.
+     * 反转正面的缠绕顺序。默认情况下，正面使用逆时针缠绕顺序。当缠绕顺序反转时，正面是具有顺时针缠绕顺序的面。
      *
      * Changing the winding order will directly affect the culling mode in materials
      * (see [com.google.android.filament.Material.getCullingMode]).
+     * 改变缠绕顺序将直接影响材质中的剔除模式（参见[com.google.android.filament.Material.getCullingMode]）。
      *
      * Inverting the winding order of front faces is useful when rendering mirrored reflections
      * (water, mirror surfaces, front camera in AR, etc.).
+     * 反转正面的缠绕顺序在渲染镜像反射（水面、镜面、AR中的前置摄像头等）时很有用。
      *
      * `true` to invert front faces, false otherwise.
+     * `true`表示反转正面，否则为false。
      */
     var isFrontFaceWindingInverted: Boolean
         get() = view.isFrontFaceWindingInverted
@@ -462,6 +544,7 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
+     * 物理系统，用于处理节点间的碰撞、节点的命中测试等。
      */
     val collisionSystem = (sharedCollisionSystem ?: createCollisionSystem(view).also {
         defaultCollisionSystem = it
@@ -469,20 +552,27 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Invoked when an frame is processed.
+     * 当处理帧时调用。
      *
      * Registers a callback to be invoked when a valid Frame is processing.
+     * 注册一个回调，在处理有效帧时调用。
      *
      * The callback to be invoked once per frame **immediately before the scene is updated.
+     * 每帧调用一次的回调，**在场景更新之前立即调用。
      *
      * The callback will only be invoked if the Frame is considered as valid.
+     * 只有当帧被认为是有效的时才会调用回调。
      */
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
 
     /**
      * Detects various gestures and events.
+     * 检测各种手势和事件。
      *
      * The gesture listener callback will notify users when a particular motion event has occurred.
+     * 手势监听器回调将在特定运动事件发生时通知用户。
      * Responds to Android touch events with listeners.
+     * 通过监听器响应Android触摸事件。
      */
     var gestureDetector: GestureDetector? =
         GestureDetector(context = context, listener = onGestureListener)
@@ -490,8 +580,10 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * The listener invoked for all the gesture detector callbacks.
+     * 为所有手势检测器回调调用的监听器。
      *
      * Responds to Android touch events with listeners.
+     * 通过监听器响应Android触摸事件。
      */
     var onGestureListener: GestureDetector.OnGestureListener?
         get() = gestureDetector?.listener
@@ -505,17 +597,22 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Helper that enables camera interaction similar to sketchfab or Google Maps.
+     * 启用类似于sketchfab或Google Maps的摄像机交互的辅助工具。
      *
      * Needs to be a callable function because it can be reinitialized in case of viewport change
      * or camera node manual position changed.
+     * 需要是一个可调用函数，因为在视口更改或摄像机节点手动位置更改时可以重新初始化。
      *
      * The first onTouch event will make the first manipulator build. So you can change the camera
      * position before any user gesture.
+     * 第一个onTouch事件将构建第一个操作器。因此您可以在任何用户手势之前更改摄像机位置。
      *
      * Clients notify the camera manipulator of various mouse or touch events, then periodically
      * call its getLookAt() method so that they can adjust their camera(s). Three modes are
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
+     * 客户端通知摄像机操作器各种鼠标或触摸事件，然后定期调用其getLookAt()方法以便调整摄像机。
+     * 支持三种模式：ORBIT、MAP和FREE_FLIGHT。要构造操作器实例，需要将所需模式传递给create方法。
      */
     var cameraManipulator: CameraGestureDetector.CameraManipulator?
         get() = cameraGestureDetector?.cameraManipulator
@@ -572,12 +669,15 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Sets this View's Camera.
+     * 设置此视图的摄像机。
      *
      * This method associates the specified Camera with this View. A Camera can be associated with
      * several View instances. To remove an existing association, simply pass null.
+     * 此方法将指定的摄像机与此视图关联。一个摄像机可以与多个视图实例关联。要移除现有关联，只需传递null。
      *
      * The View does not take ownership of the Scene pointer. Before destroying a Camera, be sure
      * to remove it from all associated Views.
+     * 视图不拥有场景指针的所有权。在销毁摄像机之前，请确保将其从所有关联的视图中移除。
      */
     fun setCameraNode(cameraNode: CameraNode) {
         if (_cameraNode != cameraNode) {
@@ -591,12 +691,16 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Add a node to the [Scene] as a direct child.
+     * 将节点作为直接子节点添加到[Scene]中。
      *
      * If the node is already in the scene, no change is made.
+     * 如果节点已经在场景中，则不做任何更改。
      *
      * @param node the node to add as a child
+     * @param node 要添加为子节点的节点
      * @throws IllegalArgumentException if the child is the same object as the parent, or if the
      * parent is a descendant of the child
+     * @throws IllegalArgumentException 如果子节点与父节点是同一个对象，或者父节点是子节点的后代
      */
     fun addChildNode(node: Node) {
         childNodes = childNodes + node
@@ -604,12 +708,16 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Add multiple nodes to the [Scene] as a direct child.
+     * 将多个节点作为直接子节点添加到[Scene]中。
      *
      * If the nodes are already in the scene, no change is made.
+     * 如果节点已经在场景中，则不做任何更改。
      *
      * @param nodes the nodes to add as children
+     * @param nodes 要添加为子节点的节点列表
      * @throws IllegalArgumentException if the child is the same object as the parent, or if the
      * parent is a descendant of the child
+     * @throws IllegalArgumentException 如果子节点与父节点是同一个对象，或者父节点是子节点的后代
      */
     fun addChildNodes(nodes: List<Node>) {
         childNodes = childNodes + nodes
@@ -617,10 +725,13 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Removes a node from the children of this [Scene].
+     * 从此[Scene]的子节点中移除一个节点。
      *
      * If the node is not in the scene, no change is made.
+     * 如果节点不在场景中，则不做任何更改。
      *
      * @param node the node to remove from the children
+     * @param node 要从子节点中移除的节点
      */
     fun removeChildNode(node: Node) {
         childNodes = childNodes - node
@@ -628,10 +739,13 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Removes multiple nodes from the children of this [Scene].
+     * 从此[Scene]的子节点中移除多个节点。
      *
      * If the nodes are not in the scene, no change is made.
+     * 如果节点不在场景中，则不做任何更改。
      *
      * @param nodes the nodes to remove from the children
+     * @param nodes 要从子节点中移除的节点列表
      */
     fun removeChildNodes(nodes: List<Node>) {
         childNodes = childNodes - nodes
@@ -639,6 +753,7 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Removes all nodes from the children of this [Scene].
+     * 从此[Scene]的子节点中移除所有节点。
      */
     fun clearChildNodes() {
         childNodes = listOf()
@@ -680,9 +795,12 @@ open class SceneView @JvmOverloads constructor(
 
     /**
      * Force destroy.
+     * 强制销毁。
      *
      * You don't have to call this method because everything is already lifecycle aware.
+     * 您不必调用此方法，因为所有内容都已具有生命周期感知能力。
      * Meaning that they are already self destroyed when they receive the `onDestroy()` callback.
+     * 这意味着当它们收到`onDestroy()`回调时，它们已经自我销毁了。
      */
     open fun destroy() {
         if (!isDestroyed) {
@@ -712,9 +830,11 @@ open class SceneView @JvmOverloads constructor(
     /**
      * Callback that occurs for each display frame. Updates the scene and reposts itself to be
      * called by the choreographer on the next frame.
+     * 每个显示帧发生的回调。更新场景并重新发布自己，以便在下一帧由编舞者调用。
      *
      * @param frameTimeNanos time in nanoseconds when the frame started being rendered,
      * Typically comes from [Choreographer.FrameCallback]
+     * @param frameTimeNanos 帧开始渲染时的纳秒时间，通常来自[Choreographer.FrameCallback]
      */
     protected open fun onFrame(frameTimeNanos: Long) {
         modelLoader.updateLoad()
