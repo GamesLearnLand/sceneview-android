@@ -27,13 +27,13 @@ private const val kUVSize = 2 // x, y
 private const val kColorSize = 4 // r, g, b, a
 
 /**
- * Geometry parameters for building and updating a Renderable
+ * 几何体参数，用于构建和更新可渲染对象（Renderable）
  *
- * A renderable is made of several primitives.
- * You can ever declare only 1 if you want each parts of your Geometry to have the same material
- * or one for each triangle indices with a different material.
- * We could declare n primitives (n per face) and give each of them a different material
- * instance, setup with different parameters
+ * 可渲染对象由多个原始图元（Primitive）组成。
+ * 您可以声明一个图元，让几何体的所有部分使用相同的材质，
+ * 或者为每个三角形索引声明一个不同的图元，使用不同的材质。
+ * 我们可以为每个面声明n个图元，并为每个图元分配不同的材质实例，
+ * 并设置不同的参数。
  *
  * @see Cube
  * @see Cylinder
@@ -41,19 +41,49 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Sphere
  */
 open class Geometry internal constructor(
+    /**
+     * 图元类型，定义了如何解释顶点索引
+     * 例如：TRIANGLES、TRIANGLE_STRIP 等
+     */
     val primitiveType: PrimitiveType,
+    
+    /**
+     * 顶点列表，包含位置、法线、纹理坐标和颜色等信息
+     */
     vertices: List<Vertex>,
+    
+    /**
+     * 顶点缓冲区，存储所有顶点数据
+     */
     val vertexBuffer: VertexBuffer,
+    
+    /**
+     * 原始图元的索引列表，每个子网格对应一组索引
+     */
     primitivesIndices: List<List<Int>>,
+    
+    /**
+     * 索引缓冲区，存储顶点索引数据
+     */
     val indexBuffer: IndexBuffer,
+    
+    /**
+     * 各个原始图元在索引缓冲区中的偏移范围
+     */
     var primitivesOffsets: List<IntRange>,
+    
+    /**
+     * 几何体的包围盒，用于快速碰撞检测和视锥体裁剪
+     */
     var boundingBox: Box
 ) {
     /**
-     * Used for constructing renderables dynamically
+     * 代表几何体的一个顶点
      *
-     * @param uvCoordinate Represents a texture Coordinate for a Vertex.
-     * Values should be between 0 and 1.
+     * @property position 顶点的位置坐标 (x, y, z)
+     * @property normal 法线向量，用于光照计算，默认为null
+     * @property uvCoordinate 纹理坐标，用于贴图映射，默认为null
+     * @property color 顶点颜色，默认为null
      */
     data class Vertex(
         val position: Position = Position(),
@@ -63,9 +93,9 @@ open class Geometry internal constructor(
     )
 
 //    /**
-//     * Represents a Submesh for a Geometry.
+//     * 代表几何体的一个子网格
 //     *
-//     * Each Geometry may have multiple Submeshes.
+//     * 每个几何体可能有多个子网格
 //     */
 //    data class PrimitiveIndices(val indices: List<Int>) {
 //        constructor(vararg indices: Int) : this(indices.toList())
@@ -78,16 +108,21 @@ open class Geometry internal constructor(
         protected var vertices: List<Vertex> = listOf()
         protected var indices: List<List<Int>> = listOf()
 
+        /**
+         * 设置顶点数据
+         *
+         * @param vertices 顶点列表
+         */
         fun vertices(vertices: List<Vertex>) = apply {
             vertexBuilder.bufferCount(
-                1 + // Position is never null
+                1 + // 位置始终存在
                         (if (vertices.hasNormals) 1 else 0) +
                         (if (vertices.hasUvCoordinates) 1 else 0) +
                         (if (vertices.hasColors) 1 else 0)
             )
             vertexBuilder.vertexCount(vertices.size)
 
-            // Position Attribute
+            // 位置属性
             var bufferIndex = 0
             vertexBuilder.attribute(
                 VertexBuffer.VertexAttribute.POSITION,
@@ -96,7 +131,8 @@ open class Geometry internal constructor(
                 0,
                 kPositionSize * Float.SIZE_BYTES
             )
-            // Tangents Attribute
+            
+            // 切线属性（基于法线计算）
             if (vertices.hasNormals) {
                 bufferIndex++
                 vertexBuilder.attribute(
@@ -108,7 +144,8 @@ open class Geometry internal constructor(
                 )
                 vertexBuilder.normalized(VertexBuffer.VertexAttribute.TANGENTS)
             }
-            // Uv Attribute
+            
+            // 纹理坐标属性
             if (vertices.hasUvCoordinates) {
                 bufferIndex++
                 vertexBuilder.attribute(
@@ -119,7 +156,8 @@ open class Geometry internal constructor(
                     kUVSize * Float.SIZE_BYTES
                 )
             }
-            // Color Attribute
+            
+            // 颜色属性
             if (vertices.hasColors) {
                 bufferIndex++
                 vertexBuilder.attribute(
@@ -134,14 +172,31 @@ open class Geometry internal constructor(
             this.vertices = vertices
         }
 
+        /**
+         * 设置原始图元的索引
+         *
+         * @param indices 索引列表
+         */
         fun primitivesIndices(indices: List<List<Int>>) = apply {
             indexBuilder.indexCount(indices.sumOf { it.size })
                 .bufferType(IndexBuffer.Builder.IndexType.UINT)
             this.indices = indices
         }
 
+        /**
+         * 设置单个原始图元的索引
+         *
+         * @param indices 索引列表
+         */
         fun indices(indices: List<Int>) = primitivesIndices(listOf(indices))
 
+        /**
+         * 构建几何体
+         *
+         * @param engine 渲染引擎
+         * @param constructor 几何体构造函数
+         * @return 构建的几何体实例
+         */
         fun <T : Geometry> build(
             engine: Engine,
             constructor: (
@@ -162,6 +217,12 @@ open class Geometry internal constructor(
             )
         }
 
+        /**
+         * 默认构建方法
+         *
+         * @param engine 渲染引擎
+         * @return 构建的几何体实例
+         */
         open fun build(engine: Engine) =
             build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Geometry(
@@ -180,17 +241,36 @@ open class Geometry internal constructor(
     val indices: List<Int>
         get() = primitivesIndices.flatten()
 
+    /**
+     * 更新顶点数据
+     *
+     * @param engine 渲染引擎
+     * @param vertices 新的顶点列表
+     */
     fun setVertices(engine: Engine, vertices: List<Vertex>) {
         this.vertices = vertices
         boundingBox = vertexBuffer.setVertices(engine, vertices)
     }
 
+    /**
+     * 更新原始图元的索引
+     *
+     * @param engine 渲染引擎
+     * @param primitivesIndices 新的原始图元索引列表
+     */
     fun setPrimitivesIndices(engine: Engine, primitivesIndices: List<List<Int>>) {
         this.primitivesIndices = primitivesIndices
         primitivesOffsets = primitivesIndices.getOffsets()
         indexBuffer.setIndices(engine, primitivesIndices.flatMap { it.indices })
     }
 
+    /**
+     * 更新几何体数据
+     *
+     * @param engine 渲染引擎
+     * @param vertices 新的顶点列表
+     * @param primitivesIndices 新的原始图元索引列表
+     */
     fun update(
         engine: Engine,
         vertices: List<Vertex> = this.vertices,
@@ -205,25 +285,42 @@ open class Geometry internal constructor(
     }
 }
 
+/**
+ * 判断顶点列表是否包含法线信息
+ */
 val List<Geometry.Vertex>.hasNormals get() = any { it.normal != null }
+
+/**
+ * 判断顶点列表是否包含纹理坐标信息
+ */
 val List<Geometry.Vertex>.hasUvCoordinates get() = any { it.uvCoordinate != null }
+
+/**
+ * 判断顶点列表是否包含颜色信息
+ */
 val List<Geometry.Vertex>.hasColors get() = any { it.color != null }
 
+/**
+ * 设置顶点缓冲区的数据
+ *
+ * @param engine 渲染引擎
+ * @param vertices 顶点列表
+ * @return 计算得到的包围盒
+ */
 fun VertexBuffer.setVertices(engine: Engine, vertices: List<Geometry.Vertex>): Box {
     var bufferIndex = 0
 
-    // Create position Buffer
+    // 创建位置缓冲区
     setBufferAt(
         engine, bufferIndex,
         FloatBuffer.allocate(vertices.size * kPositionSize).apply {
             vertices.forEach { put(it.position.toFloatArray()) }
-            // Make sure the cursor is pointing in the right place in the byte buffer
             flip()
         }, 0,
         vertices.size * kPositionSize
     )
 
-    // Create tangents Buffer
+    // 创建切线缓冲区
     if (vertices.hasNormals) {
         bufferIndex++
         setBufferAt(
@@ -236,7 +333,7 @@ fun VertexBuffer.setVertices(engine: Engine, vertices: List<Geometry.Vertex>): B
         )
     }
 
-    // Create UV Buffer
+    // 创建纹理坐标缓冲区
     if (vertices.hasUvCoordinates) {
         bufferIndex++
         setBufferAt(
@@ -249,7 +346,7 @@ fun VertexBuffer.setVertices(engine: Engine, vertices: List<Geometry.Vertex>): B
         )
     }
 
-    // Create color Buffer
+    // 创建颜色缓冲区
     if (vertices.hasColors) {
         bufferIndex++
         setBufferAt(
@@ -262,7 +359,7 @@ fun VertexBuffer.setVertices(engine: Engine, vertices: List<Geometry.Vertex>): B
         )
     }
 
-    // Calculate the Aabb in one pass through the vertices.
+    // 计算轴对齐边界框（AABB）
     var minPosition = Position(vertices.first().position)
     var maxPosition = Position(vertices.first().position)
     vertices.forEach { vertex ->
@@ -275,11 +372,17 @@ fun VertexBuffer.setVertices(engine: Engine, vertices: List<Geometry.Vertex>): B
     return Box(center, halfExtent)
 }
 
+/**
+ * 设置索引缓冲区的数据
+ *
+ * @param engine 渲染引擎
+ * @param indices 索引列表
+ */
 fun IndexBuffer.setIndices(
     engine: Engine,
     indices: List<Int>
 ) {
-    // Fill the index buffer with the data
+    // 填充索引缓冲区
     setBuffer(engine,
         IntBuffer.allocate(indices.size).apply {
             indices.forEach { put(it) }
@@ -288,6 +391,11 @@ fun IndexBuffer.setIndices(
 }
 
 
+/**
+ * 获取原始图元的偏移范围
+ *
+ * @return 偏移范围列表
+ */
 fun List<List<Int>>.getOffsets(): List<IntRange> {
     var indexStart = 0
     return map { primitiveIndices ->
@@ -298,17 +406,17 @@ fun List<List<Int>>.getOffsets(): List<IntRange> {
 }
 
 /**
- * Specifies the geometry data for a primitive.
+ * 为可渲染对象指定几何体数据
  *
- * Filament primitives must have an associated [VertexBuffer] and [IndexBuffer].
- * Typically, each primitive is specified with a pair of daisy-chained calls:
- * [geometry] and [RenderableManager.Builder.material].
+ * Filament 的原始图元必须关联一个 [VertexBuffer] 和 [IndexBuffer]。
+ * 通常，每个原始图元通过一对链式调用来指定：
+ * [geometry] 和 [RenderableManager.Builder.material]。
  * @see Geometry
  * @see Plane
  * @see Cube
  * @see Sphere
  * @see Cylinder
- * @see RenderableManager.setGeometry
+ * @see RenderableManager.Builder.geometry
  */
 fun RenderableManager.Builder.geometry(
     geometry: Geometry,
@@ -324,12 +432,12 @@ fun RenderableManager.Builder.geometry(
             offset.count()
         )
     }
-    // Overall bounding box of the renderable
+    // 整体包围盒
     boundingBox(geometry.boundingBox)
 }
 
 /**
- * Changes the geometry for the given renderable instance.
+ * 更改给定可渲染实例的几何体
  *
  * @see Geometry
  * @see Plane
@@ -354,6 +462,6 @@ fun RenderableManager.setGeometry(
             offset.count()
         )
     }
-    // Overall bounding box of the renderable
+    // 整体包围盒
     setAxisAlignedBoundingBox(instance, geometry.boundingBox)
 }

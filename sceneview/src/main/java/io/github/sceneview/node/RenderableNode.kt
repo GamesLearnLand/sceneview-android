@@ -13,32 +13,30 @@ import io.github.sceneview.math.toVector3Box
 import io.github.sceneview.safeDestroyRenderable
 
 /**
- * A Node represents a transformation within the scene graph's hierarchy.
+ * RenderableNode 是场景图层次结构中的一个节点，表示一个变换。
  *
- * This node contains a renderable model for the rendering engine to render.
+ * 该节点包含渲染引擎要渲染的可渲染模型。
  *
- * Each node can have an arbitrary number of child nodes and one parent. The parent may be
- * another node, or the [SceneView]
- * .
+ * 每个节点可以有任意数量的子节点和一个父节点。父节点可以是另一个节点，也可以是 [SceneView]。
  */
 open class RenderableNode(
-    engine: Engine,
-    @FilamentEntity entity: Entity = EntityManager.get().create(),
+    engine: Engine, // 渲染引擎实例
+    @FilamentEntity entity: Entity = EntityManager.get().create(), // Filament 实体，默认创建一个新的实体
 ) : Node(engine, entity), RenderableComponent {
 
+    /**
+     * 构造函数，用于创建带有可渲染组件的节点。
+     *
+     * @param primitiveCount 将提供给构建器的原始图元数量
+     * @param boundingBox 可渲染对象的边界框
+     * @param materialInstances 材质实例列表，每个材质实例对应一个图元
+     * @param builder 自定义 RenderableManager.Builder 的扩展函数
+     */
     constructor(
         engine: Engine,
         @FilamentEntity entity: Entity = EntityManager.get().create(),
-        /**
-         * Count the number of primitives that will be supplied to the builder
-         */
         primitiveCount: Int,
         boundingBox: Box,
-        /**
-         * Binds a material instance.
-         *
-         * If no material is specified, Filament will fall back to a basic default material.
-         */
         materialInstances: List<MaterialInstance?> = listOf(),
         builder: RenderableManager.Builder.() -> Unit,
     ) : this(engine, entity) {
@@ -53,16 +51,25 @@ open class RenderableNode(
         updateCollisionShape()
     }
 
+    /**
+     * 更新节点的可见性状态，并同步到渲染层。
+     */
     override fun updateVisibility() {
         super.updateVisibility()
 
         setLayerVisible(isVisible)
     }
 
+    /**
+     * 更新碰撞形状，基于当前的轴对齐包围盒计算新的碰撞形状。
+     */
     fun updateCollisionShape() {
         collisionShape = axisAlignedBoundingBox.toVector3Box()
     }
 
+    /**
+     * 销毁节点及其关联的资源。
+     */
     override fun destroy() {
         super.destroy()
         engine.safeDestroyRenderable(entity)
